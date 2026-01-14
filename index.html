@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Anomaly Detection System</title>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js Annotation Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.1/dist/chartjs-plugin-annotation.min.js"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ================== RESET & BASE ================== */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;line-height:1.6;min-height:100vh;}
+:root{
+--primary:#2563eb;--primary-hover:#1d4ed8;--primary-light:#eff6ff;
+--success:#22c55e;--success-bg:#f0fdf4;--success-border:#bbf7d0;
+--danger:#ef4444;--danger-bg:#fef2f2;--danger-border:#fecaca;
+--bg-primary:#f8fafc;--bg-secondary:#fff;--bg-tertiary:#f1f5f9;
+--text-primary:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;
+--border:#e2e8f0;--border-hover:#cbd5e1;
+--shadow-sm:0 1px 2px rgba(0,0,0,0.05);--shadow-md:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);
+--shadow-lg:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1);
+--radius-md:8px;--transition-normal:250ms ease;
+}
+/* ================== HEADER ================== */
+.header{background:linear-gradient(135deg,var(--primary)0%,#7c3aed 100%);color:#fff;padding:2rem 1.5rem;text-align:center;}
+.header h1{font-size:2rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.75rem;}
+.header p{font-size:1rem;opacity:.9;font-weight:400;}
+.header-icon{width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;}
+/* ================== CONTAINER ================== */
+.container{max-width:1400px;margin:0 auto;padding:1.5rem;}
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+@media(max-width:1024px){.main-grid{grid-template-columns:1fr;}}
+.card{background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow var(--transition-normal),transform var(--transition-normal);}
+.card:hover{box-shadow:var(--shadow-md);}
+.card-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;}
+.card-header-icon{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.card-header-icon.primary{background:var(--primary-light);color:var(--primary);}
+.card-header-icon.success{background:var(--success-bg);color:var(--success);}
+.card-header-icon.danger{background:var(--danger-bg);color:var(--danger);}
+.card-header-icon.warning{background:var(--warning-bg);color:var(--warning);}
+.card-title{font-size:1rem;font-weight:600;color:var(--text-primary);}
+.card-subtitle{font-size:.8rem;color:var(--text-muted);}
+.card-body{padding:1.25rem;}
+/* ================== UPLOAD ================== */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-md);padding:2rem;text-align:center;cursor:pointer;background:var(--bg-tertiary);transition:all var(--transition-normal);}
+.upload-zone:hover{border-color:var(--primary);background:var(--primary-light);}
+.upload-icon{width:56px;height:56px;margin:0 auto 1rem;background:var(--bg-secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:var(--shadow-md);}
+.browse-btn{display:inline-block;margin-top:1rem;padding:.5rem 1.25rem;background:var(--primary);color:#fff;border-radius:var(--radius-md);font-size:.85rem;font-weight:500;}
+.browse-btn:hover{background:var(--primary-hover);}
+#file-input{display:none;}
+.video-preview-container{margin-top:1rem;display:none;}
+.video-preview-container.visible{display:block;}
+.video-wrapper{position:relative;background:#000;border-radius:var(--radius-md);aspect-ratio:16/9;}
+#video-preview{width:100%;height:100%;object-fit:contain;}
+.remove-video-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:.25rem;border-radius:var(--radius-md);}
+.remove-video-btn:hover{color:var(--danger);background:var(--danger-bg);}
+.detect-btn{width:100%;padding:1rem;margin-top:1rem;background:linear-gradient(135deg,var(--primary)0%,#7c3aed 100%);color:#fff;border:none;border-radius:var(--radius-md);font-size:1rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.detect-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,.4);}
+.detect-btn:disabled{opacity:.6;cursor:not-allowed;}
+/* ================== ALERT ================== */
+.alert-section{display:none;margin-bottom:1.5rem;}
+.alert-section.visible{display:block;}
+.alert-card{display:flex;align-items:flex-start;gap:1rem;padding:1rem;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius-md);}
+.alert-icon{width:40px;height:40px;background:var(--danger);color:#fff;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;}
+.alert-title{font-size:.95rem;font-weight:600;color:var(--danger);margin-bottom:.25rem;}
+.alert-message{font-size:.85rem;color:var(--text-secondary);}
+.alert-time{font-size:.75rem;color:var(--text-muted);margin-top:.5rem;}
+/* ================== GRAPH ================== */
+.chart-container{position:relative;height:280px;margin-top:1rem;}
+/* ================== KEY FRAMES ================== */
+.key-frames{display:flex;gap:1rem;margin-top:1rem;}
+.frame-card{flex:1;}
+.frame-label{font-weight:600;margin-bottom:.25rem;color:var(--text-secondary);text-align:center;}
+.frame-card img{width:100%;border-radius:var(--radius-md);}
+</style>
+</head>
+<body>
+
+
+<header class="header">
+  <div class="header-content">
+    <h1><span class="header-icon">🎥</span>Video Anomaly Detection System</h1>
+    <p>AI-powered accident and anomaly detection in videos</p>
+  </div>
+</header>
+
+<div class="container">
+  <div id="alert-section" class="alert-section">
+    <div class="alert-card">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <div class="alert-title">Anomaly Detected!</div>
+        <div class="alert-message" id="alert-message">Sudden motion spike detected</div>
+        <div class="alert-time" id="alert-time"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="left-column">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon primary">📤</div>
+          <div><div class="card-title">Upload Video</div><div class="card-subtitle">Drag & drop or browse files</div></div>
+        </div>
+        <div class="card-body">
+          <div class="upload-zone" id="upload-zone">
+            <div class="upload-icon">📁</div>
+            <h3>Drop your video here</h3>
+            <p>Supports MP4, AVI, MOV, WebM</p>
+            <span class="browse-btn">Browse Files</span>
+            <input type="file" id="file-input" accept="video/*">
+          </div>
+          <div class="video-preview-container" id="video-preview-container">
+            <div class="video-wrapper"><video id="video-preview" controls></video></div>
+            <button class="remove-video-btn" id="remove-video-btn">✕</button>
+          </div>
+          <button class="detect-btn" id="detect-btn" disabled>🔍 Detect Anomaly</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon success" id="result-icon">✓</div>
+          <div><div class="card-title">Detection Results</div><div class="card-subtitle">Start, Peak, End frames & Graph</div></div>
+        </div>
+        <div class="card-body">
+          <div id="key-frames" class="key-frames">
+            <div class="frame-card"><div class="frame-label">Start</div><img id="frame-start" src=""><div id="frame-start-score"></div></div>
+            <div class="frame-card"><div class="frame-label">Peak</div><img id="frame-peak" src=""><div id="frame-peak-score"></div></div>
+            <div class="frame-card"><div class="frame-label">Aftermath</div><img id="frame-end" src=""><div id="frame-end-score"></div></div>
+          </div>
+          <div class="chart-container"><canvas id="error-graph"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let selectedFile = null;
+let chart = null;
+
+const uploadZone = document.getElementById("upload-zone");
+const fileInput = document.getElementById("file-input");
+const detectBtn = document.getElementById("detect-btn");
+const videoPreview = document.getElementById("video-preview");
+const previewContainer = document.getElementById("video-preview-container");
+const removeBtn = document.getElementById("remove-video-btn");
+
+const alertSection = document.getElementById("alert-section");
+const alertMessage = document.getElementById("alert-message");
+const alertTime = document.getElementById("alert-time");
+const resultIcon = document.getElementById("result-icon");
+
+const frameStart = document.getElementById("frame-start");
+const framePeak = document.getElementById("frame-peak");
+const frameEnd = document.getElementById("frame-end");
+
+/* ========== UPLOAD ========== */
+uploadZone.addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", () => {
+    selectedFile = fileInput.files[0];
+    if (!selectedFile) return;
+
+    videoPreview.src = URL.createObjectURL(selectedFile);
+    previewContainer.classList.add("visible");
+    detectBtn.disabled = false;
+});
+
+/* ========== REMOVE VIDEO ========== */
+removeBtn.addEventListener("click", () => {
+    selectedFile = null;
+    fileInput.value = "";
+    previewContainer.classList.remove("visible");
+    detectBtn.disabled = true;
+});
+
+/* ========== DETECT ========== */
+detectBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    detectBtn.disabled = true;
+    detectBtn.innerText = "Analyzing...";
+
+    alertSection.classList.remove("visible");
+
+    const formData = new FormData();
+    formData.append("video", selectedFile);
+
+    const response = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    handleResult(data);
+
+    detectBtn.innerText = "🔍 Detect Anomaly";
+    detectBtn.disabled = false;
+});
+
+/* ========== HANDLE RESULT ========== */
+function handleResult(data) {
+    alertSection.classList.add("visible");
+    alertTime.innerText = new Date().toLocaleString();
+
+    if (data.alerts.length === 0) {
+        // NORMAL VIDEO
+        alertMessage.innerText = "No anomaly detected. Video is normal.";
+        alertSection.querySelector(".alert-card").style.background = "var(--success-bg)";
+        alertSection.querySelector(".alert-card").style.borderColor = "var(--success-border)";
+        resultIcon.className = "card-header-icon success";
+        resultIcon.innerText = "✓";
+    } else {
+        // ANOMALY VIDEO
+        alertMessage.innerText = "Anomaly detected in video!";
+        alertSection.querySelector(".alert-card").style.background = "var(--danger-bg)";
+        alertSection.querySelector(".alert-card").style.borderColor = "var(--danger-border)";
+        resultIcon.className = "card-header-icon danger";
+        resultIcon.innerText = "⚠️";
+    }
+
+    // Frames
+    if (data.frames.length === 3) {
+        frameStart.src = data.frames[0];
+        framePeak.src = data.frames[1];
+        frameEnd.src = data.frames[2];
+    }
+
+    drawGraph(data.frame_indices, data.scores);
+}
+
+/* ========== GRAPH ========== */
+function drawGraph(x, y) {
+    const ctx = document.getElementById("error-graph").getContext("2d");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: x,
+            datasets: [{
+                label: "Reconstruction Error",
+                data: y,
+                borderWidth: 2,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                annotation: {
+                    annotations: {
+                        thresholdLine: {
+                            type: "line",
+                            yMin: 0.015,
+                            yMax: 0.015,
+                            borderColor: "red",
+                            borderWidth: 2,
+                            label: {
+                                enabled: true,
+                                content: "Threshold"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+
+
+</body>
+
+</html>
